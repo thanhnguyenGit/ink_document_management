@@ -1,72 +1,82 @@
 #![cfg_attr(not(feature = "std"), no_std, no_main)]
 
 #[ink::contract]
-mod proxy {
+pub mod proxy_account {
+    use ink::env::call::{build_call, ExecutionInput, Selector};
+    use ink::env::{CallFlags, DefaultEnvironment};
+    use ink::scale::{Decode, Encode};
+    use ink::storage::{traits::ManualKey, Lazy, Mapping};
 
-    /// Defines the storage of your contract.
-    /// Add new fields to the below struct in order
-    /// to add new static storage fields to your contract.
     #[ink(storage)]
     pub struct Proxy {
-        /// Stores a single `bool` value on the storage.
-        value: bool,
+        version: u32,
+        addresses: Mapping<AccountId, i32, ManualKey<0xAB>>,
+        identities: Mapping<AccountId, u32, ManualKey<0x23>>,
+        delegate_to: Lazy<Hash>,
+    }
+
+    // #[derive(Encode, Decode, Debug, Clone, PartialEq, Eq)]
+    // #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
+    pub enum ProxyError {
+        DuplicateHash,
     }
 
     impl Proxy {
-        /// Constructor that initializes the `bool` value to the given `init_value`.
         #[ink(constructor)]
-        pub fn new(init_value: bool) -> Self {
-            Self { value: init_value }
+        pub fn new(init_value: i32, hash: Hash) -> Self {
+            let mut delegate_to = Lazy::new();
+            delegate_to.set(&hash);
+            Self::env().lock_delegate_dependency(&hash);
+            Self {
+                version: 1,
+                addresses: Mapping::default(),
+                identities: Mapping::default(),
+                delegate_to,
+            }
         }
 
-        /// Constructor that initializes the `bool` value to `false`.
-        ///
-        /// Constructors can delegate to other constructors.
-        #[ink(constructor)]
-        pub fn default() -> Self {
-            Self::new(Default::default())
-        }
-
-        /// A message that can be called on instantiated contracts.
-        /// This one flips the value of the stored `bool` from `true`
-        /// to `false` and vice versa.
         #[ink(message)]
-        pub fn flip(&mut self) {
-            self.value = !self.value;
+        pub fn update_delegate_to(&mut self, new_hash: Hash) {
+            if let Some(old_hash) = self.delegate_to.get() {
+                self.env().unlock_delegate_dependency(&old_hash)
+            }
+            self.env().lock_delegate_dependency(&new_hash);
+            self.delegate_to.set(&new_hash)
         }
 
-        /// Simply returns the current value of our `bool`.
         #[ink(message)]
-        pub fn get(&self) -> bool {
-            self.value
+        pub fn document_account_new_delegate(&mut self) {
+            let selector = ink::selector_bytes!("document_account_new");
+            let _ = build_call::<DefaultEnvironment>()
+                .delegate(self.delegate_to())
+                .call_flags(CallFlags::TAIL_CALL)
+                .exec_input(ExecutionInput::new(Selector::new(selector)))
+                .returns::<()>()
+                .try_invoke();
+        }
+
+        #[ink(message)]
+        pub fn get_uuid(&self, account_id: AccountId) -> u32 {
+            self.identities.get(account_id).unwrap()
+        }
+
+        fn delegate_to(&self) -> Hash {
+            self.delegate_to
+                .get()
+                .expect("delegate_to always has a value")
         }
     }
 
-    /// Unit tests in Rust are normally defined within such a `#[cfg(test)]`
-    /// module and test functions are marked with a `#[test]` attribute.
-    /// The below code is technically just normal Rust code.
     #[cfg(test)]
     mod tests {
-        /// Imports all the definitions from the outer scope so we can use them here.
         use super::*;
 
-        /// We test if the default constructor does its job.
         #[ink::test]
-        fn default_works() {
-            let proxy = Proxy::default();
-            assert_eq!(proxy.get(), false);
-        }
+        fn default_works() {}
 
-        /// We test a simple use case of our contract.
         #[ink::test]
-        fn it_works() {
-            let mut proxy = Proxy::new(false);
-            assert_eq!(proxy.get(), false);
-            proxy.flip();
-            assert_eq!(proxy.get(), true);
-        }
+        fn it_works() {}
     }
-
 
     /// This is how you'd write end-to-end (E2E) or integration tests for ink! contracts.
     ///

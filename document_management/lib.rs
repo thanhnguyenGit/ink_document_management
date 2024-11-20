@@ -3,7 +3,7 @@
 #[ink::contract]
 mod document_management {
     use ink::env::call;
-    use ink::primitives::{self, AccountId};
+    use ink::primitives::{self};
     use ink::scale::{Decode, Encode};
     use ink::storage::Mapping;
     use ink::{
