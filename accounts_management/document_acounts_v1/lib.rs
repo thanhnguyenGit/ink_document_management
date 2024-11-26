@@ -11,8 +11,9 @@ pub mod document_acounts {
         primitives::{self, Key},
         storage::{traits::ManualKey, Lazy, Mapping, StorageVec},
     };
-    use traits::HashBuilder;
+    use traits::{Builder, HashBuilder};
 
+    // using random hex generator :)
     const VERSION_KEY: Key = 0x9e245fad;
     const IDENTITIES_KEY: Key = 0x53cd0567;
     const PERMISSON_KEY: Key = 0x71e6551d;
@@ -132,7 +133,7 @@ pub mod document_acounts {
                 return Err(AccountError::AccountAlreadyHaveUUID);
             }
 
-            let uuid = self.generate_hash(&caller);
+            let uuid = self.generate_uuid(caller.as_ref());
             self.identities.insert(caller, &uuid);
             self.env().emit_event(Event {
                 from: Some(caller),
@@ -247,10 +248,15 @@ pub mod document_acounts {
                 None => return false,
             }
         }
-        fn generate_hash(&self, input: &AccountId) -> Hash {
-            let mut res = Vec::new();
-            res.extend_from_slice(input.as_ref());
-            self.env().hash_bytes::<Blake2x256>(&res).into()
+        fn generate_uuid(&self, input: &[u8]) -> Hash {
+            let mut uuid_builder = HashBuilder::default();
+            let block_height = &[self.env().block_number() as u8];
+            let time_stamp = &[self.env().block_timestamp() as u8];
+            uuid_builder
+                .add_segment(input)
+                .add_segment(block_height)
+                .add_segment(time_stamp)
+                .build()
         }
         fn caller_is_developer(&self, caller: &AccountId) -> bool {
             if self
