@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
     use super::*;
-    use document_management::document_management::*;
+    use document_storage::document_management::*;
 
     #[ink::test]
     fn mint_works() {

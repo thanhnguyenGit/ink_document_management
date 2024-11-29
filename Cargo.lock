@@ -1489,6 +1489,8 @@ version = "0.1.0"
 dependencies = [
  "ink",
  "ink_e2e",
+ "parity-scale-codec",
+ "scale-info",
 ]
 
 [[package]]

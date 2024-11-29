@@ -1,5 +1,5 @@
 [package]
-name = "document_management"
+name = "document_storage"
 version = "0.1.0"
 authors = ["NguyenVietThanh <nguyenvietthanh18112002@gmail.com>"]
 edition = "2021"

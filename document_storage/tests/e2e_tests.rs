@@ -6,7 +6,7 @@
 #[cfg(all(test, feature = "e2e-tests"))]
 mod e2e_tests {
     /// Imports all the definitions from the outer scope so we can use them here.
-    use document_management::document_management::{DocumentManagement, DocumentManagementRef, *};
+    use document_storage::document_management::{DocumentManagement, DocumentManagementRef, *};
 
     /// A helper function used for calling contract messages.
     use ink_e2e::{subxt::dynamic::Value, ChainBackend, ContractsBackend};
