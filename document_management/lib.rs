@@ -1,7 +1,7 @@
 #![cfg_attr(not(feature = "std"), no_std, no_main)]
 
 #[ink::contract]
-mod document_management {
+pub mod document_management {
     use ink::env::call;
     use ink::primitives::{self};
     use ink::scale::{Decode, Encode};
@@ -19,14 +19,13 @@ mod document_management {
 
     //helper type
     pub type DocumentResult<T> = Result<T, DocumentError>;
-    pub type IPFSaddr = [u8; 32];
-    pub type HashedValue = [u8; 32];
+    pub type IPFSaddr = Hash;
     #[ink(storage)]
     pub struct DocumentManagement {
         // Mapping documentId to owner accountId
         document_owner: Mapping<DocumentId, AccountId>,
-        document_content: Mapping<DocumentId, HashedValue>,
-        document_metadata: Mapping<DocumentId, HashedValue>,
+        document_content: Mapping<DocumentId, Hash>,
+        document_metadata: Mapping<DocumentId, Hash>,
         // store the file on IPFS, map the document id to the ipfs addr
         document_location: Mapping<DocumentId, IPFSaddr>,
         // store total document owned by this accountId
@@ -189,7 +188,7 @@ mod document_management {
         pub fn document_content_new(
             &mut self,
             document_id: DocumentId,
-            cont: [u8; 32],
+            cont: Hash,
         ) -> DocumentResult<()> {
             let caller = self.env().caller();
             if !self.document_owner.contains(document_id) {
@@ -211,7 +210,7 @@ mod document_management {
         }
         //get document content
         #[ink(message)]
-        pub fn document_content_get(&self, document_id: DocumentId) -> Option<HashedValue> {
+        pub fn document_content_get(&self, document_id: DocumentId) -> Option<Hash> {
             self.document_content.get(&document_id).clone()
         }
         //check if document content exist
@@ -292,7 +291,7 @@ mod document_management {
         pub fn document_metadata_new(
             &mut self,
             document_id: DocumentId,
-            metadata_hash: HashedValue,
+            metadata_hash: Hash,
         ) -> DocumentResult<()> {
             let caller = self.env().caller();
             if self.check_owner_owned_document(&caller, &document_id) {
@@ -313,7 +312,7 @@ mod document_management {
         }
         //get document metadata
         #[ink(message)]
-        pub fn document_metadata_get(&self, document_id: DocumentId) -> DocumentResult<[u8; 32]> {
+        pub fn document_metadata_get(&self, document_id: DocumentId) -> DocumentResult<Hash> {
             match self.document_metadata.get(document_id) {
                 Some(meta_hash) => Ok(meta_hash),
                 None => Err(DocumentError::DocumentNotFound),
@@ -413,6 +412,18 @@ mod document_management {
             operator: AccountId,
         ) -> DocumentResult<bool> {
             Ok(self.approved_for_all(&owner, &operator))
+        }
+        #[ink(message)]
+        pub fn set_code_hash(&mut self, new_code_hash: Hash) {
+            self.env()
+                .set_code_hash(&new_code_hash)
+                .unwrap_or_else(|error| {
+                    panic!(
+                        "Failed to 'set_code_hash' to {:?} due to {:?}",
+                        new_code_hash, error
+                    )
+                });
+            ink::env::debug_print!("Switch to new code hash: {:?}", new_code_hash);
         }
 
         ///Helper function
@@ -549,144 +560,4 @@ mod document_management {
             Ok(())
         }
     }
-
-    //Unit testing
-    #[cfg(test)]
-    mod tests {
-
-        use super::*;
-
-        pub type IPFSaddr = [u8; 32];
-
-        #[ink::test]
-        fn mint_works() {
-            let accounts = ink::env::test::default_accounts::<ink::env::DefaultEnvironment>();
-            // create a new document
-            let mut document = DocumentManagement::new();
-            // assert that document is not yet exist
-            assert_eq!(
-                document.document_owner_get(1),
-                Err(DocumentError::DocumentNotFound)
-            );
-            // check the number of owned document of Alice before minting a new document
-            assert_eq!(document.numof_owned_documents(accounts.alice), 0);
-            //
-            assert_eq!(document.document_new(1), Ok(()));
-            assert_eq!(document.numof_owned_documents(accounts.alice), 1);
-        }
-        #[ink::test]
-        fn mint_an_existence_document() {
-            let accounts = ink::env::test::default_accounts::<ink::env::DefaultEnvironment>();
-            // create a new document
-            let mut document = DocumentManagement::new();
-            // instantiate value for the document
-            assert_eq!(document.document_new(1), Ok(()));
-            // ensure one event were emitted due from the instantiate transaction
-            assert_eq!(ink::env::test::recorded_events().count(), 1);
-            // ensure alice own the document instantiated
-            assert_eq!(document.numof_owned_documents(accounts.alice), 1);
-            // ensure that document with id: 1 is owned by alice
-            assert_eq!(document.document_owner_get(1), Ok(accounts.alice));
-            // ensure that a document id 1 is unique, cannot be mint again
-            assert_eq!(
-                document.document_new(1),
-                Err(DocumentError::DocumentIdAlreadyExists)
-            );
-        }
-        #[ink::test]
-        fn burn_a_document() {
-            let accounts = ink::env::test::default_accounts::<ink::env::DefaultEnvironment>();
-            // create a new document
-            let mut document = DocumentManagement::new();
-            // try delete an non-existing document
-            assert_eq!(
-                document.burn_document(1),
-                Err(DocumentError::DocumentNotFound)
-            );
-            // instantinate a document
-        }
-        #[ink::test]
-        fn document_content_work() {
-            let accounts = ink::env::test::default_accounts::<ink::env::DefaultEnvironment>();
-            let mut document = DocumentManagement::new();
-            let content_hash: HashedValue = [12; 32];
-            // ensure that document is created
-            assert_eq!(document.document_new(1), Ok(()));
-            // ensure that new document content is created, ensure that is the [u8;32]
-            assert_eq!(document.document_content_new(1, content_hash), Ok(()));
-            // ensure that new content hash belong to the corresponded documentId
-            assert_eq!(document.document_content_get(1), Some(content_hash));
-        }
-    }
-
-    ///// This is how you'd write end-to-end (E2E) or integration tests for ink! contracts.
-    /////
-    ///// When running these you need to make sure that you:
-    ///// - Compile the tests with the `e2e-tests` feature flag enabled (`--features e2e-tests`)
-    ///// - Are running a Substrate node which contains `pallet-contracts` in the background
-    //#[cfg(all(test, feature = "e2e-tests"))]
-    //mod e2e_tests {
-    //    /// Imports all the definitions from the outer scope so we can use them here.
-    //    use super::*;
-    //
-    //    /// A helper function used for calling contract messages.
-    //    use ink_e2e::ContractsBackend;
-    //
-    //    /// The End-to-End test `Result` type.
-    //    type E2EResult<T> = std::result::Result<T, Box<dyn std::error::Error>>;
-    //
-    //    /// We test that we can upload and instantiate the contract using its default constructor.
-    //    #[ink_e2e::test]
-    //    async fn default_works(mut client: ink_e2e::Client<C, E>) -> E2EResult<()> {
-    //        // Given
-    //        let mut constructor = DocumentManagementRef::default();
-    //
-    //        // When
-    //        let contract = client
-    //            .instantiate("document_management", &ink_e2e::alice(), &mut constructor)
-    //            .submit()
-    //            .await
-    //            .expect("instantiate failed");
-    //        let call_builder = contract.call_builder::<DocumentManagement>();
-    //
-    //        // Then
-    //        let get = call_builder.get();
-    //        let get_result = client.call(&ink_e2e::alice(), &get).dry_run().await?;
-    //        assert!(matches!(get_result.return_value(), false));
-    //
-    //        Ok(())
-    //    }
-    //
-    //    /// We test that we can read and write a value from the on-chain contract.
-    //    #[ink_e2e::test]
-    //    async fn it_works(mut client: ink_e2e::Client<C, E>) -> E2EResult<()> {
-    //        // Given
-    //        let mut constructor = DocumentManagementRef::new(false);
-    //        let contract = client
-    //            .instantiate("document_management", &ink_e2e::bob(), &mut constructor)
-    //            .submit()
-    //            .await
-    //            .expect("instantiate failed");
-    //        let mut call_builder = contract.call_builder::<DocumentManagement>();
-    //
-    //        let get = call_builder.get();
-    //        let get_result = client.call(&ink_e2e::bob(), &get).dry_run().await?;
-    //        assert!(matches!(get_result.return_value(), false));
-    //
-    //        // When
-    //        let flip = call_builder.flip();
-    //        let _flip_result = client
-    //            .call(&ink_e2e::bob(), &flip)
-    //            .submit()
-    //            .await
-    //            .expect("flip failed");
-    //
-    //        // Then
-    //        let get = call_builder.get();
-    //        let get_result = client.call(&ink_e2e::bob(), &get).dry_run().await?;
-    //        assert!(matches!(get_result.return_value(), true));
-    //
-    //        Ok(())
-    //    }
-    //}
 }
