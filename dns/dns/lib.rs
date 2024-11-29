@@ -32,7 +32,6 @@ mod dns {
     pub struct SetAddress {
         #[ink(topic)]
         name: Hash,
-        #[ink(topic)]
         from: AccountId,
         #[ink(topic)]
         old_addr: Option<AccountId>,
@@ -43,7 +42,6 @@ mod dns {
     pub struct Transfer {
         #[ink(topic)]
         name: Hash,
-        #[ink(topic)]
         from: AccountId,
         #[ink(topic)]
         old_addr: Option<AccountId>,

@@ -3,8 +3,9 @@
 #[ink::contract]
 pub mod document_management {
     use ink::env::call;
-    use ink::primitives::{self};
+    use ink::primitives::{self, Key};
     use ink::scale::{Decode, Encode};
+    use ink::storage::traits::ManualKey;
     use ink::storage::Mapping;
     use ink::{
         env::caller,
@@ -20,20 +21,30 @@ pub mod document_management {
     //helper type
     pub type DocumentResult<T> = Result<T, DocumentError>;
     pub type IPFSaddr = Hash;
+    //storage key
+    const OWNER_KEY: Key = 0xba8adf68;
+    const CONTENT_KEY: Key = 0x9da24437;
+    const METADATA_KEY: Key = 0x934025b6;
+    const LOCATION_KEY: Key = 0x9474161a;
+    const DOCUMENT_COUNTER_KEY: Key = 0x2434e302;
+    const OPRATOR_APPROVAL_KEY: Key = 0x613e74f2;
+    const DOCUMENT_APPROVAL_KEY: Key = 0xd9b60c53;
+
     #[ink(storage)]
+    #[derive(Default)]
     pub struct DocumentManagement {
         // Mapping documentId to owner accountId
-        document_owner: Mapping<DocumentId, AccountId>,
-        document_content: Mapping<DocumentId, Hash>,
-        document_metadata: Mapping<DocumentId, Hash>,
+        document_owner: Mapping<DocumentId, AccountId, ManualKey<OWNER_KEY>>,
+        document_content: Mapping<DocumentId, Hash, ManualKey<DOCUMENT_COUNTER_KEY>>,
+        document_metadata: Mapping<DocumentId, Hash, ManualKey<METADATA_KEY>>,
         // store the file on IPFS, map the document id to the ipfs addr
-        document_location: Mapping<DocumentId, IPFSaddr>,
+        document_location: Mapping<DocumentId, IPFSaddr, ManualKey<LOCATION_KEY>>,
         // store total document owned by this accountId
-        owned_document_counter: Mapping<AccountId, u32>,
+        owned_document_counter: Mapping<AccountId, u32, ManualKey<DOCUMENT_COUNTER_KEY>>,
         // store the operator accounts that can manage the documents on the owner
-        operator_approvals: Mapping<(AccountId, AccountId), bool>,
+        operator_approvals: Mapping<(AccountId, AccountId), bool, ManualKey<OPRATOR_APPROVAL_KEY>>,
         // store an approved account that can only interact with that particuler documentId
-        document_approvals: Mapping<DocumentId, AccountId>,
+        document_approvals: Mapping<DocumentId, AccountId, ManualKey<DOCUMENT_APPROVAL_KEY>>,
     }
 
     #[derive(Encode, Decode, Debug, Clone, PartialEq, Eq)]
@@ -126,15 +137,7 @@ pub mod document_management {
     impl DocumentManagement {
         #[ink(constructor)]
         pub fn new() -> Self {
-            Self {
-                document_owner: Default::default(),
-                document_content: Default::default(),
-                document_metadata: Default::default(),
-                document_location: Default::default(),
-                document_approvals: Default::default(),
-                owned_document_counter: Default::default(),
-                operator_approvals: Default::default(),
-            }
+            Self::default()
         }
         //Create a new document
         #[ink(message)]
@@ -143,6 +146,8 @@ pub mod document_management {
             self.add_document_to(&caller, document_id)?;
             self.increase_documents_count(&caller);
             self.env().emit_event(Transfer {
+                // accountid like this indicate a null placeholder, don't want to known
+                // who create the NFT.
                 from: Some(AccountId::from([0x0; 32])),
                 to: Some(caller),
                 id: document_id,
@@ -158,6 +163,9 @@ pub mod document_management {
         #[ink(message)]
         pub fn burn_document(&mut self, document_id: DocumentId) -> DocumentResult<()> {
             let caller = self.env().caller();
+            if self.verify_document_owner(document_id) == false {
+                return Err(DocumentError::DocumentNotFound);
+            }
             if self.check_owner_owned_document(&caller, &document_id) == false {
                 return Err(DocumentError::NotOwner);
             }
@@ -428,7 +436,7 @@ pub mod document_management {
 
         ///Helper function
         fn add_document_to(&mut self, to: &AccountId, id: DocumentId) -> DocumentResult<()> {
-            if *to == AccountId::from([0x0; 32]) {
+            if *to == AccountId::from([0x00; 32]) {
                 return Err(DocumentError::NotAllow);
             }
             match self.document_owner.get(id) {
@@ -439,14 +447,16 @@ pub mod document_management {
                 }
             }
         }
-
         fn check_owner_owned_document(&self, caller: &AccountId, document_id: &DocumentId) -> bool {
             if let val = caller {
-                return *val == self.document_owner.get(&document_id).expect("Val exist");
+                return *val
+                    == self
+                        .document_owner
+                        .get(&document_id)
+                        .expect("This caller oowned the document");
             }
             false
         }
-
         fn check_is_proxy(&self, owner: AccountId, operator: AccountId) -> DocumentResult<bool> {
             Ok(true)
         }
@@ -522,6 +532,7 @@ pub mod document_management {
                 None => Err(DocumentError::NoDataFound),
             }
         }
+        // check whether the 'from' accountid is owner or an approved account
         fn approved_or_owner(
             &self,
             from: AccountId,

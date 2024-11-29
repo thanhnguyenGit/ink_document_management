@@ -1,4 +1,3 @@
-#![cfg_attr(not(feature = "std"), no_std, no_main)]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -7,7 +6,7 @@ mod tests {
     #[ink::test]
     fn mint_works() {
         let accounts = ink::env::test::default_accounts::<ink::env::DefaultEnvironment>();
-        // create a new document
+        // create a new document document contract instance
         let mut document = DocumentManagement::new();
         // assert that document is not yet exist
         assert_eq!(
@@ -23,7 +22,7 @@ mod tests {
     #[ink::test]
     fn mint_an_existence_document() {
         let accounts = ink::env::test::default_accounts::<ink::env::DefaultEnvironment>();
-        // create a new document
+        // create a new document contract instance
         let mut document = DocumentManagement::new();
         // instantiate value for the document
         assert_eq!(document.document_new(1), Ok(()));
@@ -42,14 +41,26 @@ mod tests {
     #[ink::test]
     fn burn_a_document() {
         let accounts = ink::env::test::default_accounts::<ink::env::DefaultEnvironment>();
-        // create a new document
+        // create a new document contract instance
+        let mut document = DocumentManagement::new();
+        // Alice create a new document with id 1
+        assert_eq!(document.document_new(1), Ok(()));
+        assert_eq!(document.numof_owned_documents(accounts.alice), 1);
+        assert_eq!(document.document_owner_get(1), Ok(accounts.alice));
+        // delete the document with id: 1
+        assert_eq!(document.burn_document(1), Ok(()));
+        // Alice now do not own the document with id: 1
+        assert_eq!(document.numof_owned_documents(accounts.alice), 0);
+    }
+    #[ink::test]
+    fn burn_a_non_exist_document() {
+        // instantinate the contract
         let mut document = DocumentManagement::new();
         // try delete an non-existing document
         assert_eq!(
-            document.burn_document(1),
+            document.burn_document(2),
             Err(DocumentError::DocumentNotFound)
         );
-        // instantinate a document
     }
     #[ink::test]
     fn document_content_work() {
