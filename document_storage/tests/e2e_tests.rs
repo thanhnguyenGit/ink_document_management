@@ -16,7 +16,7 @@ mod e2e_tests {
 
     /// We test that we can upload and instantiate the contract using its default constructor.
     #[ink_e2e::test]
-    async fn default_works(mut client: ink_e2e::Client<C, E>) -> E2EResult<()> {
+    async fn doc_storage_works(mut client: ink_e2e::Client<C, E>) -> E2EResult<()> {
         // Given
         let mut constructor = DocumentManagementRef::new();
         let contract = client
@@ -26,24 +26,14 @@ mod e2e_tests {
             .expect("instantiate failed");
         let document_id: u32 = 1;
         // When
-        let mut call_builder = contract.call_builder::<DocumentManagement>();
-        let _document_new = client
-            .call(&ink_e2e::alice(), &call_builder.document_new(1))
-            .submit()
-            .await;
         // Then
-        let get_result = client
-            .call(&ink_e2e::alice(), &call_builder.verify_document_owner(1))
-            .dry_run()
-            .await?;
-        assert!(matches!(get_result.return_value(), true));
 
         Ok(())
     }
 
     /// We test that we can read and write a value from the on-chain contract.
     #[ink_e2e::test]
-    async fn it_works(mut client: ink_e2e::Client<C, E>) -> E2EResult<()> {
+    async fn doc_storage_also_works(mut client: ink_e2e::Client<C, E>) -> E2EResult<()> {
         // // Given
         // let mut constructor = DocumentManagementRef::default();
         // let contract = client

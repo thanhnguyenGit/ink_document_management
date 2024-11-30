@@ -22,7 +22,7 @@ jobs:
     - name: Install rust-toolchain
       uses: dtolnay/rust-toolchain@stable
       with: 
-        toolchain: ${{ matrix.toolchain }}
+        toolchain: nightly
         target: wasm32-unkwown-unknown
         override: true
     - name: Install cargo-contract and required tools
