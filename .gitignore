@@ -104,3 +104,9 @@ default.nix
 
 # Before adding new lines, see the comment at the top.
 
+document_storage/Cargo.lock
+document_acounts/tests/unit_tests.rs
+document_acounts/tests/unit_tests.rs
+document_acounts/lib.rs
+document_acounts/tests/unit_tests.rs
+dns/dns/Cargo.lock

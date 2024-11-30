@@ -1,22 +1,44 @@
-name: Rust
+name: check-contract-unit-tests
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "dev" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ "dev" ]
 
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
+  check: 
+    name: check-contract-unit-tests
+    strategy: 
+      matrix: 
+        platform: 
+          - ubuntu-lastest
+          - macos-latest
+
+    runs-on: ${{ matrix.platform }}
   build:
 
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
-    - name: Build
-      run: cargo build --verbose
-    - name: Run tests
-      run: cargo test --verbose
+    - name: Checkout sources & submodules
+      uses: actions/checkout@v4
+
+    - name: Install rust-toolchain
+      uses: dtolnay/rust-toolchain@stable
+      with: 
+        toolchain: ${{ matrix.toolchain }}
+        target: wasm32-unkwown-unknown
+        override: true
+
+    - name: Install cargo-contract and required tools
+      run: |
+        apt update && apt install -y protobuf-compiler
+        rustup update nightly
+        cargo +nightly install cargo-contract --version 3.0.1
+      
+    - name: Run unit tests
+      run: cargo test
