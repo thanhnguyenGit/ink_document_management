@@ -1,28 +1,28 @@
-[package]
-name = "document_stores"
+[workspace]
+members = [
+    "dns/dns",
+    "docs_support",
+    "document_acounts",
+    "document_storage",
+]
+[workspace.package]
+name = "document_store_project"
+categories = ["no-std", "embedded"]
 version = "0.1.0"
 authors = ["[your_name] <[your_email]>"]
 edition = "2021"
 
-[dependencies]
+[workspace.dependencies]
+# Ink dependencies
 ink = { version = "5.0.0", default-features = false }
 scale = { package = "parity-scale-codec", version = "3", default-features = false, features = ["derive"] }
-scale-info = { version = "2.6", default-features = false, features = ["derive"], optional = true }
-[dev-dependencies]
-ink_e2e = { version = "5.0.0" }
+scale-info = { version = "2.6", default-features = false, features = ["derive"] }
+# Local dependencies
+dns = {path= "../document_managment_ink/dns/dns",  default-features = false}
+docs_support = {path = "../document_managment_ink/docs_support",  default-features = false}
+document_acounts = {path = "../document_managment_ink/document_acounts", default-features = false}
+document_storage = {path = "../document_managment_ink/document_storage",  default-features = false}
 
-[lib]
-name = "document_store_project"
-path = "lib.rs"
-crate-type = [
-    "rlib",
-]
-[features]
-default = ["std"]
-std = [
-    "ink/std",  
-    "scale/std",
-    "scale-info/std",
-]
-ink-as-dependency = []
-e2e-tests = []
+[profile.release]
+panic = "abort"
+lto = true
