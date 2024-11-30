@@ -10,33 +10,25 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
+  build:
+    runs-on: ${{matrix.os}}
     strategy: 
       matrix: 
-        platform: 
-          - ubuntu-lastest
-          - macos-latest
-
-  build:
-
-    runs-on: ${{ matrix.platform }}
+        os: [ubuntu-lastest,macOS-lastest]
 
     steps:
-
     - name: Checkout sources & submodules
       uses: actions/checkout@v4
-
     - name: Install rust-toolchain
       uses: dtolnay/rust-toolchain@stable
       with: 
         toolchain: ${{ matrix.toolchain }}
         target: wasm32-unkwown-unknown
         override: true
-
     - name: Install cargo-contract and required tools
       run: |
         apt update && apt install -y protobuf-compiler
         rustup update nightly
         cargo +nightly install cargo-contract --version 3.0.1
-
     - name: Run unit tests
       run: cargo test
