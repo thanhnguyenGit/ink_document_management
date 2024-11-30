@@ -10,8 +10,6 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  check: 
-    name: check-contract-unit-tests
     strategy: 
       matrix: 
         platform: 
@@ -24,6 +22,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+
     - name: Checkout sources & submodules
       uses: actions/checkout@v4
 
@@ -39,6 +38,6 @@ jobs:
         apt update && apt install -y protobuf-compiler
         rustup update nightly
         cargo +nightly install cargo-contract --version 3.0.1
-      
+
     - name: Run unit tests
       run: cargo test
