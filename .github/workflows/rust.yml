@@ -16,10 +16,9 @@ jobs:
           - ubuntu-lastest
           - macos-latest
 
-    runs-on: ${{ matrix.platform }}
   build:
 
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.platform }}
 
     steps:
 
