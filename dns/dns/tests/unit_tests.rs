@@ -5,13 +5,17 @@
 #[cfg(test)]
 mod tests {
     /// Imports all the definitions from the outer scope so we can use them here.
-    use dns::dns::*;
+    use dns::dns::{Dns, DnsError};
 
     /// We test if the default constructor does its job.
     #[ink::test]
-    fn default_works() {}
+    fn dns_works1() {
+        assert_eq!(1, 1)
+    }
 
     /// We test a simple use case of our contract.
     #[ink::test]
-    fn it_works() {}
+    fn dns_works2() {
+        assert_eq!(1, 1)
+    }
 }

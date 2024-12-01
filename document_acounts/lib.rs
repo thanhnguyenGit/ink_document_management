@@ -2,21 +2,15 @@
 #[ink::contract]
 pub mod document_acounts {
     use ink::{
-        env::{
-            hash::{Blake2x256, CryptoHash},
-            ContractEnv,
-        },
-        prelude::vec,
-        primitives::{self, Key},
+        primitives::Key,
         storage::{traits::ManualKey, Lazy, Mapping, StorageVec},
     };
 
-    use docs_support::HashBuilder;
+    use docs_support::{Builder, HashBuilder};
 
     // using random hex generator :)
     const VERSION_KEY: Key = 0x9e245fad;
     const IDENTITIES_KEY: Key = 0x53cd0567;
-    const PERMISSON_KEY: Key = 0x71e6551d;
     const ROLE_KEY: Key = 0xa5c4ec7f;
     const DOMAIN_KEY: Key = 0x2acfa878;
     const METADATA_KEY: Key = 0x12896c2e;
@@ -26,8 +20,8 @@ pub mod document_acounts {
     #[derive(Default)]
     pub struct DocumentAcounts {
         version: Lazy<u32, ManualKey<VERSION_KEY>>,
-        identities: Mapping<AccountId, Hash, ManualKey<IDENTITIES_KEY>>,
-        role: Mapping<AccountId, Role, ManualKey<ROLE_KEY>>,
+        pub identities: Mapping<AccountId, Hash, ManualKey<IDENTITIES_KEY>>,
+        pub role: Mapping<AccountId, Role, ManualKey<ROLE_KEY>>,
         domain: Mapping<AccountId, Domain, ManualKey<DOMAIN_KEY>>,
         metadata: Mapping<AccountId, Hash, ManualKey<METADATA_KEY>>,
     }
@@ -47,6 +41,7 @@ pub mod document_acounts {
         DupilcatedUUID,
         AccountAlreadyHaveUUID,
         Unauthorized,
+        NoDataFound,
     }
 
     #[derive(Debug, PartialEq, Eq, Clone)]
@@ -79,6 +74,7 @@ pub mod document_acounts {
 
     impl DocumentAcounts {
         #[ink(constructor)]
+        #[must_use]
         pub fn new() -> Self {
             Self::default()
         }
@@ -115,7 +111,7 @@ pub mod document_acounts {
                 from: Some(caller),
                 to: None,
                 event_type: EventType::VersionUpdated {
-                    old_version: old_version,
+                    old_version,
                     new_version: init_version,
                 },
             });
@@ -132,14 +128,14 @@ pub mod document_acounts {
                 );
                 return Err(AccountError::Unauthorized);
             }
-            if let Some(caller_role) = self.role.get(&caller) {
+            if let Some(caller_role) = self.role.get(caller) {
                 match caller_role {
                     Role::Admin => {
                         self.role.insert(to, &role);
                         self.env().emit_event(Event {
                             from: Some(caller),
                             to: Some(to),
-                            event_type: EventType::RoleGranted { role: role },
+                            event_type: EventType::RoleGranted { role },
                         });
                     }
                     _ => return Err(AccountError::Unauthorized),
@@ -158,7 +154,7 @@ pub mod document_acounts {
                 );
                 return Err(AccountError::Unauthorized);
             }
-            if let Some(caller_role) = self.role.get(&caller) {
+            if let Some(caller_role) = self.role.get(caller) {
                 match caller_role {
                     Role::Admin => {
                         let previous_role = self
@@ -181,15 +177,12 @@ pub mod document_acounts {
         }
         #[ink(message)]
         pub fn get_role(&self, account_id: AccountId) -> AccountResult<Role> {
-            match self.role.get(account_id) {
-                Some(role) => {
-                    ink::env::debug_println!("Role of account input is '{:?}'", role);
-                    return Ok(role);
-                }
-                None => {
-                    ink::env::debug_println!("No Role exist for this account");
-                    return Err(AccountError::NoDataFound);
-                }
+            if let Some(role) = self.role.get(account_id) {
+                ink::env::debug_println!("Role of account input is '{:?}'", role);
+                Ok(role)
+            } else {
+                ink::env::debug_println!("No Role exist for this account");
+                Err(AccountError::NoDataFound)
             }
         }
 
@@ -200,13 +193,13 @@ pub mod document_acounts {
                         "Accound Error:UUID for this account already exist {:?}",
                         AccountError::AccountAlreadyHaveUUID
                     );
-                    return true;
+                    true
                 }
-                None => return false,
+                None => false,
             }
         }
         fn generate_uuid(&self, input: &[u8]) -> Hash {
-            let mut uuid_builder = HashBuilder::default();
+            let uuid_builder = HashBuilder::default();
             let block_height = &[self.env().block_number() as u8];
             let time_stamp = &[self.env().block_timestamp() as u8];
             uuid_builder
@@ -227,15 +220,12 @@ pub mod document_acounts {
             true
         }
         fn get_caller_role(&self, caller: &AccountId) -> Option<Role> {
-            match self.role.get(caller) {
-                Some(role) => {
-                    ink::env::debug_println!("caller '{:?}' has role '{:?}'", caller, role);
-                    return Some(role);
-                }
-                None => {
-                    ink::env::debug_println!("caller '{:?}' has No role", caller);
-                    return None;
-                }
+            if let Some(role) = self.role.get(caller) {
+                ink::env::debug_println!("caller '{:?}' has role '{:?}'", caller, role);
+                Some(role)
+            } else {
+                ink::env::debug_println!("caller '{:?}' has No role", caller);
+                None
             }
         }
     }

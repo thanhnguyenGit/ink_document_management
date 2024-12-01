@@ -1,8 +1,6 @@
 #![cfg_attr(not(feature = "std"), no_std, no_main)]
 
-use core::ops::Deref;
-
-use ink::env::hash::{Blake2x128, Blake2x256, HashOutput, Sha2x256};
+use ink::env::hash::{Blake2x256, HashOutput};
 use ink::primitives::Hash;
 
 pub trait Builder {
@@ -17,9 +15,10 @@ pub struct HashBuilder {
 }
 impl Builder for HashBuilder {
     type OutputType = Hash;
+    #[must_use]
     fn add_segment(mut self, input: &[u8]) -> Self {
         let left = &self.buffer[..16];
-        let right = &input.as_ref()[16..];
+        let right = &input[16..];
         let mut res = [0u8; 32];
         res[16..].copy_from_slice(left);
         res[..16].copy_from_slice(right);
@@ -29,7 +28,7 @@ impl Builder for HashBuilder {
     fn build(self) -> Self::OutputType {
         let mut output_hash = <Blake2x256 as HashOutput>::Type::default();
         let input = &self.buffer;
-        ink::env::hash_bytes::<Blake2x256>(&self.buffer, &mut output_hash);
+        ink::env::hash_bytes::<Blake2x256>(input, &mut output_hash);
         output_hash.into()
     }
 }
@@ -39,7 +38,7 @@ mod buffer {
 
     use crate::{Builder, HashBuilder};
 
-    #[ink::test]
+    #[test]
     fn build_hash() {
         let mut hash_builder = HashBuilder::default();
         let input1: AccountId = [0x17; 32].into();

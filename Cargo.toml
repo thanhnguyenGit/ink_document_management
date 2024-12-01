@@ -4,7 +4,9 @@ members = [
     "docs_support",
     "document_acounts",
     "document_storage",
+    "permisson_control",
 ]
+
 [workspace.package]
 name = "document_store_project"
 categories = ["no-std", "embedded"]
@@ -22,7 +24,8 @@ dns = {path= "../document_managment_ink/dns/dns",  default-features = false}
 docs_support = {path = "../document_managment_ink/docs_support",  default-features = false}
 document_acounts = {path = "../document_managment_ink/document_acounts", default-features = false}
 document_storage = {path = "../document_managment_ink/document_storage",  default-features = false}
-
+permisson_control = {path = "../document_managment_ink/permisson_control", default-features = false}
 [profile.release]
 panic = "abort"
 lto = true
+
