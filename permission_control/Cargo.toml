@@ -1,17 +1,14 @@
 [package]
-name = "permisson_control"
-version = "0.1.0"
-authors = ["[your_name] <[your_email]>"]
+name = "permission_control"
+version = "5.1.0"
+authors = ["Use Ink <ink@use.ink>"]
 edition = "2021"
 
 [dependencies]
-# Ink! dependcies
-ink = { version = "5.0.0", default-features = false }
+ink = { version = "5.1.0", default-features = false }
 scale = { package = "parity-scale-codec", version = "3", default-features = false, features = ["derive"] }
 scale-info = { version = "2.3", default-features = false, features = ["derive"], optional = true }
-docs_support = {path = "../docs_support/", default-features = false}
-# Local dependencies
-document_acounts = {path = "../document_acounts", default-features = false,optional = true}
+
 
 [dev-dependencies]
 ink_e2e = { version = "5.0.0" }
@@ -25,7 +22,6 @@ std = [
     "ink/std",
     "scale/std",
     "scale-info/std",
-    "document_acounts/std",
 ]
 ink-as-dependency = []
 e2e-tests = []

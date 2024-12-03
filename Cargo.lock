@@ -4162,11 +4162,9 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e3148f5046208a5d56bcfc03053e3ca6334e51da8dfb19b6cdc8b306fae3283e"
 
 [[package]]
-name = "permisson_control"
-version = "0.1.0"
+name = "permission_control"
+version = "5.1.0"
 dependencies = [
- "docs_support",
- "document_acounts",
  "ink",
  "ink_e2e",
  "parity-scale-codec",
